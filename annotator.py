@@ -86,7 +86,7 @@ for controller in oi_section['Children']:
 
             # If the button was not specified in the controller map, give a warning
             if len(matching_btns) == 0:
-                print('Warning: No entry in button map', map_file, 'for button', btn_id)
+                print('Warning: No entry in button map', map_file, 'for button', btn_id, '(' + btn_name + ')')
                 continue
 
             btn = matching_btns[0]
