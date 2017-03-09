@@ -103,6 +103,3 @@ for controller in oi_section['Children']:
 
 # Output pdf
 pdf.output('out/out.pdf', 'F')
-
-print(controller_map)
-print([btn for btn in controller_map['buttons'] if btn['id'] == 0])
