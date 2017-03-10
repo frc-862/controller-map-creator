@@ -26,9 +26,6 @@ def default_ctor(loader, tag_suffix, node):
 # Setup the PDF output
 pdf = FPDF()
 
-# Setup the font for Pillow
-font = ImageFont.truetype('LiberationSans-Regular.ttf', 34)
-
 # Create a hidden main window, used to that file chooser dialogs can be made
 root_window = Tk().withdraw()
 
@@ -71,8 +68,15 @@ for controller in controllers:
     img = Image.open(controller_map['image'])
     draw = ImageDraw.Draw(img)
 
+    # Setup the font for Pillow
+    font_size = controller_map['fontSize']
+    font = ImageFont.truetype('LiberationSans-Regular.ttf', font_size)
+
     # Write the name of the controller on the upper-left of the image
     draw.text((0, 0), controller_name, (128, 128, 128), font=font)
+
+    # Dictionary of tuple(x, y) to boolean of positions where a command is drawn already
+    taken_positions = {}
 
     # For each button binding on the controller
     for binding in bindings:
@@ -96,10 +100,17 @@ for controller in controllers:
 
             btn = matching_btns[0]
 
+            pos = (btn['x'], btn['y'])
+
+            while taken_positions.get(pos, False) != False:
+                pos = (pos[0], pos[1] + font_size)
+
             # Draw the command name in the area specified by the controller map
-            draw.text((btn['x'], btn['y']),
+            draw.text(pos,
                       btn_name,
                       (0, 0, 0), font=font)
+            
+            taken_positions[pos] = True
 
     # Save the finished picture
     img.save('out/' + controller_name + '.jpg')
