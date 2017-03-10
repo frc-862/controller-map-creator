@@ -7,7 +7,7 @@ CONFIG_URL = 'https://raw.githubusercontent.com/frc-862/valkyrie/master/valkyrie
 
 app = Flask(__name__, static_folder='out')
 
-@app.route('/update-mapping')
+@app.route('/update-mapping', methods=['GET', 'POST'])
 def update_mapping():
     # Download the latest Valkyrie yaml
     urllib.request.urlretrieve(CONFIG_URL, 'valkyrie.yaml')
