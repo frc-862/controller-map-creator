@@ -1,0 +1,6 @@
+robotbuilderConfig: 'valkyrie.yaml'
+
+mapFiles:
+  DriverLeft: 'controllers/thrustmaster.yaml'
+  DriverRight: 'controllers/thrustmaster.yaml'
+  ButtonThing: 'controllers/buttonPanel.yaml'

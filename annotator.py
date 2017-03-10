@@ -1,3 +1,4 @@
+import sys
 import json
 import yaml
 try:
@@ -23,6 +24,25 @@ def default_ctor(loader, tag_suffix, node):
 
 # Begin program
 
+# Load in the config file if it exists
+config = None
+if len(sys.argv) > 1:
+    config_file_path = sys.argv[1]
+    with open(config_file_path, 'r') as f:
+        config = yaml.load(f, Loader=Loader)
+
+"""
+Reads a value from the config.
+Returns None if not defined or if config doesn't exist
+"""
+def read_config_val(key):
+    if config is None:
+        return None
+
+    return config.get(key, None)
+
+config_map_files = read_config_val('mapFiles')
+
 # Setup the PDF output
 pdf = FPDF()
 
@@ -32,9 +52,18 @@ root_window = Tk().withdraw()
 # Register a default constructor so that yaml objects can be serialized
 yaml.add_multi_constructor('', default_ctor, Loader=Loader)
 
+# Determine RobotBuilder config file location
+robotbuilder_config_path = read_config_val('robotbuilderConfig')
+
+# Ask the user to pick the robotbuilder config file if it wasn't in the config
+if robotbuilder_config_path is None:
+    robotbuilder_config_path = filedialog.askopenfilename(
+            title="Choose a RobotBuilder config",
+            filetypes=(("RobotBuilder Config", "*.yaml"), ("all files", "*.*")))
+
 # Load in the RobotBuilder config
 data = None
-with open('valkyrie.yaml', 'r') as f:
+with open(robotbuilder_config_path, 'r') as f:
     data = yaml.load(f, Loader=Loader)
 
 # Find the OI section of the RobotBuilder config
@@ -46,11 +75,18 @@ for controller in controllers:
     controller_name = controller['Name']  # The name of the controller, ex. "Driver Left"
     bindings = controller['Children']  # All of the button bindings specified for the controller
 
-    # Ask the user to pick a config file for the controller
-    map_file = filedialog.askopenfilename(
-        initialdir="controllers",
-        title="Choose a controller file for " + controller_name,
-        filetypes=(("Controller Map", "*.yaml"), ("all files", "*.*")))
+    map_file = None
+    # Try to get the map file from the config
+    if config_map_files is not None:
+        map_file = config_map_files.get(controller_name, None)
+
+    # If we couldn't get it from the config, ask the user for the map file
+    if map_file is None:
+        # Ask the user to pick a config file for the controller
+        map_file = filedialog.askopenfilename(
+            initialdir="controllers",
+            title="Choose a controller file for " + controller_name,
+            filetypes=(("Controller Map", "*.yaml"), ("all files", "*.*")))
 
     # If the user closed the window or chose cancel, then skip the controller
     if not isinstance(map_file, str) or map_file == '':
