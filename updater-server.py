@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 import annotator
 import urllib.request
@@ -23,4 +24,4 @@ def serve_pdf():
 
 # Run the webapp if we're not a library
 if __name__ == "__main__":
-    app.run()
+    app.run(port=os.environ.get('PORT', 5000), host='0.0.0.0')
