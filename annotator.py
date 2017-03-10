@@ -8,9 +8,6 @@ except ImportError:
 
 from PIL import Image, ImageFont, ImageDraw
 
-from tkinter import Tk
-from tkinter import filedialog
-
 from fpdf import FPDF
 
 from datetime import datetime
@@ -94,6 +91,8 @@ class ControllerAnnotation:
 
         # If we couldn't get it from the config, ask the user for the map file
         if map_file is None and self.gui:
+            from tkinter import filedialog
+
             # Ask the user to pick a config file for the controller
             map_file = filedialog.askopenfilename(
                 initialdir="controllers",
@@ -203,6 +202,8 @@ class ControllerAnnotation:
 
         # Ask the user to pick the robotbuilder config file if it wasn't in the config
         if robotbuilder_config_path is None and self.gui:
+            from tkinter import filedialog
+            
             robotbuilder_config_path = filedialog.askopenfilename(
                     title="Choose a RobotBuilder config",
                     filetypes=(("RobotBuilder Config", "*.yaml"), ("all files", "*.*")))
