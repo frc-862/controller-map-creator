@@ -33,7 +33,9 @@ def _load_yaml(path):
 
     data = None
     with open(path, 'r') as f:
-        data = yaml.load(f, Loader=Loader)
+        yaml_elements = yaml.load_all(f, Loader=Loader)
+        for x in yaml_elements:
+            data = x
     
     return data
 
@@ -168,7 +170,7 @@ class ControllerAnnotation:
 
             # If the button was not specified in the controller map, give a warning
             if len(matching_btns) == 0:
-                print('Warning: No entry in button map', map_file, 'for button', btn_id, '(' + btn_name + ')')
+                print('Warning: No entry in button map', self.__get_controller_config_path(controller_name), 'for button', btn_id, '(' + btn_name + ')')
                 continue
 
             btn = matching_btns[0]
