@@ -1,9 +1,9 @@
 image: 'controllers/tmaster.jpg'
 
 buttons:
-  - id: 22
+  - id: 2
     x: 650
     y: 300
-  - id: 19
+  - id: 9
     x: 860
     y: 125

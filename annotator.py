@@ -42,10 +42,12 @@ with open('valkyrie.yaml', 'r') as f:
 
 # Find the OI section of the RobotBuilder config
 oi_section = [x for x in data['Children'] if x['Base'] == 'OI'][0]
+controllers = oi_section['Children']  # List of all of the controllers
 
 # For each controller specified in RobotBuilder
-for controller in oi_section['Children']:
-    controller_name = controller['Name']
+for controller in controllers:
+    controller_name = controller['Name']  # The name of the controller, ex. "Driver Left"
+    bindings = controller['Children']  # All of the button bindings specified for the controller
 
     # Ask the user to pick a config file for the controller
     map_file = filedialog.askopenfilename(
@@ -63,6 +65,8 @@ for controller in oi_section['Children']:
     with open(map_file, 'r') as f:
         controller_map = yaml.load(f, Loader=Loader)
 
+    controller_buttons = controller_map['buttons']
+
     # Open the base image for the controller and create a pillow drawing context
     img = Image.open(controller_map['image'])
     draw = ImageDraw.Draw(img)
@@ -71,18 +75,19 @@ for controller in oi_section['Children']:
     draw.text((0, 0), controller_name, (128, 128, 128), font=font)
 
     # For each button binding on the controller
-    for x in controller['Children']:
-        if x.get('Base', '') == 'Joystick Button':
+    for binding in bindings:
+        if binding.get('Base', '') == 'Joystick Button':
             # The ID of the button on the controller
-            btn_id = x['Properties']['Button']['value']
+            btn_id = binding['Properties']['Button']['value']
 
             # The name of the command to run
-            btn_name = x['Properties']['Command']['value']
+            command_name = binding['Properties']['Command']['value']
 
-            print(btn_id, x['Properties']['Joystick']['value'], btn_name)
+            # The name of the button binding
+            btn_name = binding.get('Name', 'No name specified')
 
             # Find the button on the controller map
-            matching_btns = [btn for btn in controller_map['buttons'] if str(btn['id']) == btn_id]
+            matching_btns = [cbtn for cbtn in controller_buttons if str(cbtn['id']) == btn_id]
 
             # If the button was not specified in the controller map, give a warning
             if len(matching_btns) == 0:
@@ -93,7 +98,7 @@ for controller in oi_section['Children']:
 
             # Draw the command name in the area specified by the controller map
             draw.text((btn['x'], btn['y']),
-                      x.get('Name', 'No name specified'),
+                      btn_name,
                       (0, 0, 0), font=font)
 
     # Save the finished picture
