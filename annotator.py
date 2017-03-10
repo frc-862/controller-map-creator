@@ -231,5 +231,13 @@ class ControllerAnnotation:
 
         pdf.output('out/out.pdf')
 
-annotation = ControllerAnnotation(None, True)
-annotation.create_mapping_files()
+
+# If we're not a library, then execute the annotator
+if __name__ == '__main__':
+    # Load in the config file if it exists
+    config_file_path = None
+    if len(sys.argv) > 1:
+        config_file_path = sys.argv[1]
+
+    annotation = ControllerAnnotation(config_file_path, True)
+    annotation.create_mapping_files()
