@@ -1,0 +1,28 @@
+image: 'controllers/buttonPanel.png'
+fontSize: 34
+
+buttons:
+  - id: 1  # Bottom right button
+    x: 120
+    y: 765
+  - id: 2  # Bottom left button
+    x: 120
+    y: 765
+  - id: 3  # Top right button
+    x: 520
+    y: 420
+  - id: 4  # Top left button
+    x: 120
+    y: 420
+  - id: 5  # Bottom right switch
+    x: 490
+    y: 230
+  - id: 6  # Bottom left switch
+    x: 95
+    y: 230
+  - id: 7  # Top right switch
+    x: 490
+    y: 100
+  - id: 8  # Top left switch
+    x: 95
+    y: 100

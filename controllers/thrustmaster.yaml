@@ -1,9 +1,22 @@
 image: 'controllers/tmaster.jpg'
+fontSize: 34
 
 buttons:
-  - id: 2
+  - id: 1
     x: 650
     y: 300
-  - id: 9
+  - id: -1  # Hat, not sure what to do with this
     x: 860
     y: 125
+  - id: 9
+    x: 1415
+    y: 975
+  - id: 2
+    x: 910
+    y: 290
+  - id: 10
+    x: 1375
+    y: 1075
+  - id: 7
+    x: 1400
+    y: 650
