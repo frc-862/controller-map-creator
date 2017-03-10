@@ -13,6 +13,8 @@ from tkinter import filedialog
 
 from fpdf import FPDF
 
+from datetime import datetime
+
 
 """
 Default constructor for parsing yaml objects
@@ -21,102 +23,137 @@ Parses them generically
 def default_ctor(loader, tag_suffix, node):
     return loader.construct_mapping(node, deep=True)
 
+"""
+Load a YAML config from a file
 
-# Begin program
+Returns a dict representing the RobotBuilder config
+"""
+def _load_yaml(path):
+    yaml.add_multi_constructor('', default_ctor, Loader=Loader)
 
-# Load in the config file if it exists
-config = None
-if len(sys.argv) > 1:
-    config_file_path = sys.argv[1]
-    with open(config_file_path, 'r') as f:
-        config = yaml.load(f, Loader=Loader)
+    data = None
+    with open(path, 'r') as f:
+        data = yaml.load(f, Loader=Loader)
+    
+    return data
 
 """
-Reads a value from the config.
-Returns None if not defined or if config doesn't exist
+Get controllers from a RobotBuilder config
+Returns a list of controllers (OI devices)
 """
-def read_config_val(key):
-    if config is None:
-        return None
+def _get_controllers(rb_conf):
+    # Find the OI section of the RobotBuilder config
+    oi_section = [x for x in rb_conf['Children'] if x['Base'] == 'OI'][0]
+    
+    # List of all of the controllers
+    controllers = oi_section['Children']
+    return controllers
 
-    return config.get(key, None)
+"""
+Get button bindings on a RobotBuilder controller
 
-config_map_files = read_config_val('mapFiles')
+Returns a list of buttons
+"""
+def _get_bindings(controller):
+    return controller['Children']
 
-# Setup the PDF output
-pdf = FPDF()
+class ControllerAnnotation:
+    def __init__(self, config_file_path=None, gui=False):
+        self.gui = gui
 
-# Create a hidden main window, used to that file chooser dialogs can be made
-root_window = Tk().withdraw()
+        self.config = None
+        if config_file_path is not None:
+            self.config = _load_yaml(config_file_path)
 
-# Register a default constructor so that yaml objects can be serialized
-yaml.add_multi_constructor('', default_ctor, Loader=Loader)
+        self.config_map_files = self.__read_config_val('mapFiles')
+    
+    """
+    Reads a value from the config.
+    Returns None if not defined or if config doesn't exist
+    """
+    def __read_config_val(self, key):
+        if self.config is None:
+            return None
 
-# Determine RobotBuilder config file location
-robotbuilder_config_path = read_config_val('robotbuilderConfig')
+        return self.config.get(key, None)
 
-# Ask the user to pick the robotbuilder config file if it wasn't in the config
-if robotbuilder_config_path is None:
-    robotbuilder_config_path = filedialog.askopenfilename(
-            title="Choose a RobotBuilder config",
-            filetypes=(("RobotBuilder Config", "*.yaml"), ("all files", "*.*")))
+        return data
 
-# Load in the RobotBuilder config
-data = None
-with open(robotbuilder_config_path, 'r') as f:
-    data = yaml.load(f, Loader=Loader)
+    """
+    Get the path to the controller config
 
-# Find the OI section of the RobotBuilder config
-oi_section = [x for x in data['Children'] if x['Base'] == 'OI'][0]
-controllers = oi_section['Children']  # List of all of the controllers
+    If returns None, then skip the controller
+    """
+    def __get_controller_config_path(self, controller_name):
+        map_file = None
+        # Try to get the map file from the config
+        if self.config_map_files is not None:
+            map_file = self.config_map_files.get(controller_name, None)
 
-# For each controller specified in RobotBuilder
-for controller in controllers:
-    controller_name = controller['Name']  # The name of the controller, ex. "Driver Left"
-    bindings = controller['Children']  # All of the button bindings specified for the controller
+        # If we couldn't get it from the config, ask the user for the map file
+        if map_file is None and self.gui:
+            # Ask the user to pick a config file for the controller
+            map_file = filedialog.askopenfilename(
+                initialdir="controllers",
+                title="Choose a controller file for " + controller_name,
+                filetypes=(("Controller Map", "*.yaml"), ("all files", "*.*")))
+        
+        return map_file
 
-    map_file = None
-    # Try to get the map file from the config
-    if config_map_files is not None:
-        map_file = config_map_files.get(controller_name, None)
+    """
+    Get the controller config for a controller
+    Specifies the x/y of the buttons, the font size, the controller image, etc
 
-    # If we couldn't get it from the config, ask the user for the map file
-    if map_file is None:
-        # Ask the user to pick a config file for the controller
-        map_file = filedialog.askopenfilename(
-            initialdir="controllers",
-            title="Choose a controller file for " + controller_name,
-            filetypes=(("Controller Map", "*.yaml"), ("all files", "*.*")))
+    If returns None, then skip the controller
+    """
+    def __get_controller_config(self, controller_name):
+        path = self.__get_controller_config_path(controller_name)
 
-    # If the user closed the window or chose cancel, then skip the controller
-    if not isinstance(map_file, str) or map_file == '':
-        print('No map file specfied for', controller_name, 'SKIPPING')
-        continue
+        if path is None or len(path) == 0:
+            return None
+        
+        return _load_yaml(path)
+    
+    """
+    Draw a mapping image for a RobotBuilder controller
 
-    # Load in the controller config file
-    controller_map = None
-    with open(map_file, 'r') as f:
-        controller_map = yaml.load(f, Loader=Loader)
+    Saves to out/controller_name.jpg
 
-    controller_buttons = controller_map['buttons']
+    Returns the filename of the output image, or None if the controller doesn't have a config
+    """
+    def __draw_mapping_img(self, controller):
+        controller_name = controller['Name']  # The name of the controller, ex. "Driver Left"
 
-    # Open the base image for the controller and create a pillow drawing context
-    img = Image.open(controller_map['image'])
-    draw = ImageDraw.Draw(img)
+        controller_map = self.__get_controller_config(controller_name)
+        if controller_map is None:  # No controller map available, skip
+            return None
+        
+        # Get the buttons from the controller map
+        controller_buttons = controller_map['buttons']
 
-    # Setup the font for Pillow
-    font_size = controller_map['fontSize']
-    font = ImageFont.truetype('LiberationSans-Regular.ttf', font_size)
+        # Open the base image for the controller and create a pillow drawing context
+        img = Image.open(controller_map['image'])
+        draw = ImageDraw.Draw(img)
 
-    # Write the name of the controller on the upper-left of the image
-    draw.text((0, 0), controller_name, (128, 128, 128), font=font)
+        # Setup the font for Pillow
+        font_size = controller_map['fontSize']
+        font = ImageFont.truetype('LiberationSans-Regular.ttf', font_size)
 
-    # Dictionary of tuple(x, y) to boolean of positions where a command is drawn already
-    taken_positions = {}
+        # Write the name of the controller on the upper-left of the image
+        draw.text((0, 0), controller_name, (128, 128, 128), font=font)
 
-    # For each button binding on the controller
-    for binding in bindings:
-        if binding.get('Base', '') == 'Joystick Button':
+        # Write the date and time under the controller name
+        cur_datetime = datetime.utcnow().strftime('%Y-%m-%d %H:%M')
+        draw.text((0, font_size), 'As of ' + cur_datetime + ' UTC', (128, 128, 128), font=font)
+
+        # Dictionary of tuple(x, y) to boolean of positions where a command is drawn already
+        taken_positions = {}
+
+        for binding in _get_bindings(controller):
+            # Skip bindings that aren't to buttons
+            if binding.get('Base', '') != 'Joystick Button':
+                continue
+
             # The ID of the button on the controller
             btn_id = binding['Properties']['Button']['value']
 
@@ -148,10 +185,51 @@ for controller in controllers:
             
             taken_positions[pos] = True
 
-    # Save the finished picture
-    img.save('out/' + controller_name + '.jpg')
-    pdf.add_page()
-    pdf.image('out/' + controller_name + '.jpg', w=200)
+        # Save the finished image to a file
+        output_path = 'out/' + controller_name + '.jpg'
+        img.save(output_path)
 
-# Output pdf
-pdf.output('out/out.pdf', 'F')
+        return output_path
+    
+    """
+    Gets the RobotBuilder config path,
+    either from the config or via file chooser
+    """
+    def __get_rb_config_path(self):
+        # Determine RobotBuilder config file location from config
+        robotbuilder_config_path = self.__read_config_val('robotbuilderConfig')
+
+        # Ask the user to pick the robotbuilder config file if it wasn't in the config
+        if robotbuilder_config_path is None and self.gui:
+            robotbuilder_config_path = filedialog.askopenfilename(
+                    title="Choose a RobotBuilder config",
+                    filetypes=(("RobotBuilder Config", "*.yaml"), ("all files", "*.*")))
+        
+        return robotbuilder_config_path
+
+    """
+    Create all of the controller mapping images
+    and the final controller mapping pdf
+    """
+    def create_mapping_files(self):
+        # Load the RobotBuilder config
+        rb_conf = _load_yaml(self.__get_rb_config_path())
+
+        # Create the PDF
+        pdf = FPDF()
+
+        # Draw all of the images and merge to PDF
+        for controller in _get_controllers(rb_conf):
+            img_path = self.__draw_mapping_img(controller)
+
+            if img_path is None:  # Skipping controller
+                continue
+            
+            # Add image to PDF
+            pdf.add_page()
+            pdf.image(img_path, w=200)
+
+        pdf.output('out/out.pdf')
+
+annotation = ControllerAnnotation(None, True)
+annotation.create_mapping_files()
